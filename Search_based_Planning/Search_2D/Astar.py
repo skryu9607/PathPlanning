@@ -138,7 +138,7 @@ class AStar:
         if self.is_collision(s_start, s_goal):
             return math.inf
 
-        return math.hypot(s_goal[0] - s_start[0], s_goal[1] - s_start[1])
+        return abs(s_goal[0] - s_start[0]) + abs(s_goal[1] - s_start[1])
 
     def is_collision(self, s_start, s_end):
         """

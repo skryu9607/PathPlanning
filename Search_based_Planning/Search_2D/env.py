@@ -1,13 +1,9 @@
-"""
-Env 2D
-@author: huiming zhou
-"""
-
 
 class Env:
     def __init__(self):
-        self.x_range = 51  # size of background
+        self.x_range = 51  
         self.y_range = 31
+        # Definitions of motions
         self.motions = [(-1, 0), (-1, 1), (0, 1), (1, 1),
                         (1, 0), (1, -1), (0, -1), (-1, -1)]
         self.obs = self.obs_map()
@@ -18,7 +14,7 @@ class Env:
     def obs_map(self):
         """
         Initialize obstacles' positions
-        :return: map of obstacles
+        -> return: map of obstacles
         """
 
         x = self.x_range
@@ -40,7 +36,7 @@ class Env:
         for i in range(15):
             obs.add((20, i))
 
-        for i in range(15, 30):
+        for i in range(20, 30):
             obs.add((30, i))
         for i in range(16):
             obs.add((40, i))
