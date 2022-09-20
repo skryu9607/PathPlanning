@@ -26,9 +26,8 @@ class DStar:
         self.obs = self.Env.obs  # position of obstacles
         self.x = self.Env.x_range
         self.y = self.Env.y_range
-
-        self.g, self.rhs, self.U = {}, {}, {}
         self.km = 0
+        self.g, self.rhs, self.U = {}, {}, {}
 
         for i in range(1, self.Env.x_range - 1):
             for j in range(1, self.Env.y_range - 1):
@@ -106,11 +105,11 @@ class DStar:
 
             if k_old < self.CalculateKey(s):
                 self.U[s] = self.CalculateKey(s)
-            elif self.g[s] > self.rhs[s]:
+            elif self.g[s] > self.rhs[s]: # overconsistent
                 self.g[s] = self.rhs[s]
                 for x in self.get_neighbor(s):
                     self.UpdateVertex(x)
-            else:
+            else: # self.g[s] < self.rhs[s] : underconsistent
                 self.g[s] = float("inf")
                 self.UpdateVertex(s)
                 for x in self.get_neighbor(s):
@@ -128,7 +127,7 @@ class DStar:
             self.U[s] = self.CalculateKey(s)
 
     def CalculateKey(self, s):
-        return [min(self.g[s], self.rhs[s]) + self.h(self.s_start, s) + self.km,
+        return [min(self.g[s], self.rhs[s]) + self.h(self.s_start, s) + self.km ,
                 min(self.g[s], self.rhs[s])]
 
     def TopKey(self):
@@ -196,7 +195,7 @@ class DStar:
         path = [self.s_start]
         s = self.s_start
 
-        for k in range(100):
+        for _ in range(100):
             g_list = {}
             for x in self.get_neighbor(s):
                 if not self.is_collision(s, x):
@@ -231,7 +230,7 @@ def main():
     s_start = (5, 5)
     s_goal = (45, 25)
 
-    dstar = DStar(s_start, s_goal, "euclidean")
+    dstar = DStar(s_start, s_goal, "Euclidian")
     dstar.run()
 
 

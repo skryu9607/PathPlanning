@@ -29,7 +29,6 @@ class BFS(AStar):
         self.g[self.s_goal] = math.inf
         heapq.heappush(self.OPEN,
                        (0, self.s_start))
-
         while self.OPEN:
             _, s = heapq.heappop(self.OPEN)
             self.CLOSED.append(s)

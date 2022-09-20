@@ -20,7 +20,7 @@ class BestFirst(AStar):
     """
     def searching(self):
         """
-        Breadth-first Searching.
+        Best-first Searching.
         :return: path, visited order
         """
 

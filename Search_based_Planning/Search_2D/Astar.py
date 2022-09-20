@@ -12,8 +12,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../Search_based_Planning/")
 
 from Search_2D import plotting, env
-
-
 class AStar:
     """AStar set the cost + heuristics as the priority
     """
@@ -31,7 +29,7 @@ class AStar:
         self.CLOSED = []  # CLOSED set / VISITED order
         self.PARENT = dict()  # recorded parent
         self.g = dict()  # cost to come
-
+        self.theta = 0.5
     def searching(self):
         """
         A_star Searching.
@@ -63,60 +61,6 @@ class AStar:
                     heapq.heappush(self.OPEN, (self.f_value(s_n), s_n))
 
         return self.extract_path(self.PARENT), self.CLOSED
-
-    def searching_repeated_astar(self, e):
-        """
-        repeated A*.
-        :param e: weight of A*
-        :return: path and visited order
-        """
-
-        path, visited = [], []
-
-        while e >= 1:
-            p_k, v_k = self.repeated_searching(self.s_start, self.s_goal, e)
-            path.append(p_k)
-            visited.append(v_k)
-            e -= 0.5
-
-        return path, visited
-
-    def repeated_searching(self, s_start, s_goal, e):
-        """
-        run A* with weight e.
-        :param s_start: starting state
-        :param s_goal: goal state
-        :param e: weight of a*
-        :return: path and visited order.
-        """
-
-        g = {s_start: 0, s_goal: float("inf")}
-        PARENT = {s_start: s_start}
-        OPEN = []
-        CLOSED = []
-        heapq.heappush(OPEN,
-                       (g[s_start] + e * self.heuristic(s_start), s_start))
-
-        while OPEN:
-            _, s = heapq.heappop(OPEN)
-            CLOSED.append(s)
-
-            if s == s_goal:
-                break
-
-            for s_n in self.get_neighbor(s):
-                new_cost = g[s] + self.cost(s, s_n)
-
-                if s_n not in g:
-                    g[s_n] = math.inf
-
-                if new_cost < g[s_n]:  # conditions for updating Cost
-                    g[s_n] = new_cost
-                    PARENT[s_n] = s
-                    heapq.heappush(OPEN, (g[s_n] + e * self.heuristic(s_n), s_n))
-
-        return self.extract_path(PARENT), CLOSED
-
     def get_neighbor(self, s):
         """
         find neighbors of state s that not in obstacles.
@@ -138,7 +82,7 @@ class AStar:
         if self.is_collision(s_start, s_goal):
             return math.inf
 
-        return math.hypot(s_goal[0] - s_start[0], s_goal[1] - s_start[1])
+        return math.hypot(s_goal[0] - s_start[0] , s_goal[1] - s_start[1])
 
     def is_collision(self, s_start, s_end):
         """
@@ -170,8 +114,8 @@ class AStar:
         :param s: current state
         :return: f
         """
-
-        return self.g[s] + self.heuristic(s)
+        
+        return  (1 - self.theta) * self.g[s] + self.theta * self.heuristic(s)
 
     def extract_path(self, PARENT):
         """
