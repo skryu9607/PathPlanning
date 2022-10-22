@@ -10,11 +10,11 @@ class Node:
         self.parent = None
 
 class RRT:
-    def __init__(self, s_start,s_goal,step_len,goal_sample_rate,iter_max):
+    def __init__(self, s_start,s_goal,step_len,goal_sample_rate):
         self.s_start = Node(s_start)
         self.s_goal = Node(s_goal)
         self.step_len = step_len
-        self.iter_max = iter_max
+        #self.iter_max = iter_max
         self.goal_sample_rate = goal_sample_rate
         
         self.vertex = [self.s_start]
@@ -33,7 +33,9 @@ class RRT:
         
     def planning(self):
         for _ in range(self.iter_max):
+            # node_rand는 random node를 만든다. 
             node_rand = self.generate_random_node(self.goal_sample_rate)
+            # 가장 가까운 것을 고른다. 
             node_near = self.nearest(self.vertex, node_rand)
             node_new = self.new_state(node_near,node_rand)
             if node_new and not self.utils.is_collision(node_near,node_new):
@@ -45,18 +47,44 @@ class RRT:
                     return self.extract_path(node_new)
         
         return None
+    def planning_uniform(self):
+        while True:
+            i = 1
+            # node_rand는 random node를 만든다. env.x[0]에서 env.x[1]까지의 구간에서의.
+            node_rand = self.generate_random_node(self.goal_sample_rate)
+            # random하게 고른다. 랜덤으로 고른 node가 무엇이든 간에, tree안에 있는 random 한 것을 고른다.  
+            node_uniform = self.random(self.vertex,i)
+            if i > 1:
+                while node_uniform == node_rand:
+                    node_uniform = self.random(self.vertex,i)
+            node_new = self.new_state(node_uniform,node_rand)
+            if not self.utils.is_collision(node_uniform,node_new):
+                dist,_ = self.get_distance_and_angle(node_new,self.s_goal)
+                self.vertex.append(self.new_state)
+                i = i + 1
+                if dist<=self.step_len and not self.utils.is_collision(node_new,self.s_goal):
+                    self.new_state(node_new,self.s_goal)
+                    return self.extract_path(node_new),i
+            if i  > 10:
+                break
+
+        return None
 
     def generate_random_node(self,goal_sample_rate):
         delta = self.utils.delta
         if np.random.random()>goal_sample_rate:
+            # delta is 0.5. <- minimum unit of distance.
             x_rand = np.random.uniform(self.x_range[0]+delta,self.x_range[1])
             y_rand = np.random.uniform(self.y_range[0]+delta,self.y_range[1])
             return Node((x_rand,y_rand))
         return self.s_goal
 
+    def random(self,node_list,i):
+        return node_list[np.random.randint(0,i)]
+
     def nearest(self,node_list,n):
         return  node_list[int(np.argmin([math.hypot(nd.x-n.x,nd.y-n.y) for nd in node_list]))]
-    
+
     def get_distance_and_angle(self,node_start,node_end):
         dx = node_end.x - node_start.x
         dy = node_end.y - node_start.y
@@ -83,11 +111,10 @@ class RRT:
         
         return path
 def main():
-    x_start = (1,1)
+    x_start = (2,2)
     x_goal = (49,24)
-
-    rrt = RRT(x_start,x_goal,0.5,0.05,10000)
-    path = rrt.planning()
+    rrt = RRT(x_start,x_goal,0.5,0.1)
+    path,i = rrt.planning_uniform()
     if path:
         rrt.plotting.animation(rrt.vertex,path,"RRT",True)
     else:

@@ -6,7 +6,7 @@ Environment for rrt_2D
 
 class Env:
     def __init__(self):
-        self.x_range = (0, 50)
+        self.x_range = (0, 30)
         self.y_range = (0, 30)
         self.obs_boundary = self.obs_boundary()
         self.obs_circle = self.obs_circle()
