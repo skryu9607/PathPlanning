@@ -1,3 +1,4 @@
+from operator import length_hint
 import os
 import numpy as np
 import math
@@ -32,7 +33,7 @@ class RRT:
         self.obs_boun = self.env.obs_boundary
         
     def planning(self):
-        for _ in range(self.iter_max):
+        while True:
             # node_rand는 random node를 만든다. 
             node_rand = self.generate_random_node(self.goal_sample_rate)
             # 가장 가까운 것을 고른다. 
@@ -45,29 +46,42 @@ class RRT:
                 if dist<=self.step_len and not self.utils.is_collision(node_new,self.s_goal):
                     self.new_state(node_new,self.s_goal)
                     return self.extract_path(node_new)
-        
         return None
     def planning_uniform(self):
+        len = 1
         while True:
-            i = 1
             # node_rand는 random node를 만든다. env.x[0]에서 env.x[1]까지의 구간에서의.
             node_rand = self.generate_random_node(self.goal_sample_rate)
             # random하게 고른다. 랜덤으로 고른 node가 무엇이든 간에, tree안에 있는 random 한 것을 고른다.  
-            node_uniform = self.random(self.vertex,i)
-            if i > 1:
-                while node_uniform == node_rand:
-                    node_uniform = self.random(self.vertex,i)
+            node_uniform = self.random(self.vertex,len)
+            # self.new_state : Node 생성. 
+            # Attribute error가 나왔다. 
+            # 혹시 random으로 만들어진 값이 node가 아닌가?self.vertex는 Node들을 넣어둔 list.
             node_new = self.new_state(node_uniform,node_rand)
-            if not self.utils.is_collision(node_uniform,node_new):
+
+            if node_new and not self.utils.is_collision(node_uniform,node_new):
+                self.vertex.append(node_new)
+                len = len + 1
                 dist,_ = self.get_distance_and_angle(node_new,self.s_goal)
-                self.vertex.append(self.new_state)
-                i = i + 1
                 if dist<=self.step_len and not self.utils.is_collision(node_new,self.s_goal):
                     self.new_state(node_new,self.s_goal)
-                    return self.extract_path(node_new),i
-            if i  > 10:
-                break
+                    return self.extract_path(node_new),len
+            if len > 99999:
+                return None, len
+    def planning_heur(self):
+        while True:
+            # node_rand는 random node를 만든다. 
+            node_rand = self.generate_random_node(self.goal_sample_rate)
+            # 가장 가까운 것을 고른다. 
+            node_near = self.nearest(self.vertex, self.s_goal)
+            node_new = self.new_state(node_near,node_rand)
+            if node_new and not self.utils.is_collision(node_near,node_new):
+                self.vertex.append(node_new)
+                dist,_ = self.get_distance_and_angle(node_new,self.s_goal)
 
+                if dist<=self.step_len and not self.utils.is_collision(node_new,self.s_goal):
+                    self.new_state(node_new,self.s_goal)
+                    return self.extract_path(node_new)
         return None
 
     def generate_random_node(self,goal_sample_rate):
@@ -78,13 +92,11 @@ class RRT:
             y_rand = np.random.uniform(self.y_range[0]+delta,self.y_range[1])
             return Node((x_rand,y_rand))
         return self.s_goal
-
     def random(self,node_list,i):
-        return node_list[np.random.randint(0,i)]
-
+        rand = np.random.randint(0,i)
+        return node_list[rand]
     def nearest(self,node_list,n):
-        return  node_list[int(np.argmin([math.hypot(nd.x-n.x,nd.y-n.y) for nd in node_list]))]
-
+        return  node_list[int(np.argmin([math.hypot(nd.x - n.x, nd.y - n.y) for nd in node_list]))]
     def get_distance_and_angle(self,node_start,node_end):
         dx = node_end.x - node_start.x
         dy = node_end.y - node_start.y
@@ -92,10 +104,11 @@ class RRT:
     
     def new_state(self,node_start,node_end):
         dist,theta = self.get_distance_and_angle(node_start,node_end)
-
         dist = min(self.step_len,dist)
         node_new = Node((node_start.x + dist * math.cos(theta),
         node_start.y + dist * math.sin(theta)))
+        node_new.x = node_start.x + dist * math.cos(theta)
+        node_new.y = node_start.y + dist * math.sin(theta)
         node_new.parent = node_start
 
         return node_new
@@ -112,13 +125,16 @@ class RRT:
         return path
 def main():
     x_start = (2,2)
-    x_goal = (49,24)
-    rrt = RRT(x_start,x_goal,0.5,0.1)
-    path,i = rrt.planning_uniform()
+    x_goal = (10,20)
+    rrt = RRT(x_start,x_goal,2.0,0.1)
+    path,leng = rrt.planning_uniform()
     if path:
-        rrt.plotting.animation(rrt.vertex,path,"RRT",True)
+        rrt.plotting.animation(rrt.vertex,path,"Uniform random sampling based search",True)
+        print(leng)
     else:
+        rrt.plotting.animation(rrt.vertex,path,"Uniform random sampling based search",True)
         print("No path Found!")
+        print(leng)
 if __name__ == "__main__":
     main()
 
