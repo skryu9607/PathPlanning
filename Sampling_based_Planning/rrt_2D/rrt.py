@@ -125,7 +125,7 @@ class RRT:
         return path
 def main():
     x_start = (2,2)
-    x_goal = (10,20)
+    x_goal = (49,24)
     rrt = RRT(x_start,x_goal,2.0,0.1)
     path,leng = rrt.planning_uniform()
     if path:
