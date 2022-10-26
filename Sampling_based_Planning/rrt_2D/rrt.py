@@ -69,10 +69,11 @@ class RRT:
             if len > 99999:
                 return None, len
     def planning_heur(self):
+        # x_tree = argmin straight-line-distance-to-goal(x)
         while True:
             # node_rand는 random node를 만든다. 
             node_rand = self.generate_random_node(self.goal_sample_rate)
-            # 가장 가까운 것을 고른다. 
+            # 가장 가까운 목표 지점으로부터 가장 가까운 것을 고른다.
             node_near = self.nearest(self.vertex, self.s_goal)
             node_new = self.new_state(node_near,node_rand)
             if node_new and not self.utils.is_collision(node_near,node_new):
@@ -125,16 +126,17 @@ class RRT:
         return path
 def main():
     x_start = (2,2)
-    x_goal = (49,24)
-    rrt = RRT(x_start,x_goal,2.0,0.1)
-    path,leng = rrt.planning_uniform()
+    x_goal = (10,20)
+    rrt = RRT(x_start,x_goal,0.5,0.1)
+    #path,leng = rrt.planning_uniform()
+    path = rrt.planning()
+    print(len(path))
     if path:
-        rrt.plotting.animation(rrt.vertex,path,"Uniform random sampling based search",True)
-        print(leng)
+        rrt.plotting.animation(rrt.vertex,path,"RRT",True)
     else:
-        rrt.plotting.animation(rrt.vertex,path,"Uniform random sampling based search",True)
+        rrt.plotting.animation(rrt.vertex,path,"RRT",True)
         print("No path Found!")
-        print(leng)
+        #print(leng)
 if __name__ == "__main__":
     main()
 

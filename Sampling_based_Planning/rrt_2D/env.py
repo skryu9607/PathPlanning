@@ -13,6 +13,16 @@ class Env:
         self.obs_rectangle = self.obs_rectangle()
 
     @staticmethod
+    def obs_boundary():
+        obs_boundary = [
+            [0, 0, 1, 30],
+            [0, 30, 50, 1],
+            [1, 0, 50, 1],
+            [50, 1, 1, 30]
+        ]
+        return obs_boundary
+
+    @staticmethod
     def obs_rectangle():
         obs_rectangle = [
             [14, 12, 8, 2],
@@ -32,16 +42,9 @@ class Env:
             [37, 23, 3]
         ]
         return obs_cir
-    @staticmethod
-    def obs_boundary():
-        obs_boundary = [
-            [0, 0, 1, 30],
-            [0, 30, 50, 1],
-            [1, 0, 50, 1],
-            [50, 1, 1, 30]
-        ]
-        return obs_boundary
-'''
+
+
+'''   
     @staticmethod
     def obs_rectangle():
         obs_rectangle = [
@@ -54,5 +57,5 @@ class Env:
         obs_cir = [
             [7, 12, 2]
         ]
-        return obs_cir
+        return obs_cir    
 '''
