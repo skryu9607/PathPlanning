@@ -58,13 +58,14 @@ class RrtStar:
                 self.vertex.append(node_new)
 
                 if neighbor_index:
-                    self.choose_parent(node_new, neighbor_index)
-                    self.rewire(node_new, neighbor_index)
+                    self.choose_parent(node_new, neighbor_index,node_rand)
+                    self.rewire(node_new, neighbor_index,node_rand)
 
         index = self.search_goal_parent()
         self.path = self.extract_path(self.vertex[index])
-
-        self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
+        print(len(self.path))
+        self.plotting.animation(self.vertex, self.path, "rrt* Variant, N = " + str(self.iter_max))
+ 
 
     def new_state(self, node_start, node_goal):
         dist, theta = self.get_distance_and_angle(node_start, node_goal)
@@ -76,18 +77,24 @@ class RrtStar:
         node_new.parent = node_start
 
         return node_new
-
-    def choose_parent(self, node_new, neighbor_index):
-        cost = [self.get_new_cost(self.vertex[i], node_new) for i in neighbor_index]
-
-        cost_min_index = neighbor_index[int(np.argmin(cost))]
-        node_new.parent = self.vertex[cost_min_index]
-
-    def rewire(self, node_new, neighbor_index):
+    def choose_parent(self, node_new, neighbor_index,node_rand):
+        cost_prev = np.zeros(len(neighbor_index))
+        cost_global = np.zeros(len(neighbor_index))
+        cost_local = np.zeros(len(neighbor_index))
+        cost = np.zeros(len(neighbor_index))
+        for i in range(len(neighbor_index)):
+            cost_prev[i] = self.get_new_cost(self.vertex[i], node_new)
+            cost_global[i] = self.get_cost_global(self.vertex[i])
+            cost_local[i] = self.get_cost_local(self.vertex[i],node_rand)
+            cost[i] = cost_prev[i] + cost_global[i] + cost_local[i]
+        imp_cost_min_index = neighbor_index[np.argmin(cost)]
+        node_new.parent = self.vertex[imp_cost_min_index]
+    def rewire(self, node_new, neighbor_index,node_rand):
         for i in neighbor_index:
             node_neighbor = self.vertex[i]
-
-            if self.cost(node_neighbor) > self.get_new_cost(node_new, node_neighbor):
+            cost_prev = self.get_new_cost(node_new,node_neighbor)
+            cost_local = self.get_cost_local(node_new,node_rand)
+            if self.cost(node_neighbor) > cost_prev + cost_local:
                 node_neighbor.parent = node_new
 
     def search_goal_parent(self):
@@ -103,8 +110,15 @@ class RrtStar:
 
     def get_new_cost(self, node_start, node_end):
         dist, _ = self.get_distance_and_angle(node_start, node_end)
-
         return self.cost(node_start) + dist
+
+    def get_cost_local(self,s_near,s_rand):
+        dist_local,_ = self.get_distance_and_angle(s_near,s_rand)
+        return dist_local
+
+    def get_cost_global(self,node_start):
+        dist_global,_ = self.get_distance_and_angle(node_start,self.s_goal)
+        return dist_global
 
     def generate_random_node(self, goal_sample_rate):
         delta = self.utils.delta
@@ -117,7 +131,7 @@ class RrtStar:
 
     def find_near_neighbor(self, node_new):
         n = len(self.vertex) + 1
-        r = min(self.search_radius * math.sqrt((math.log(n) / n)), self.step_len)
+        r = min(self.search_radius * math.sqrt((math.log(n) / n)),self.step_len)
 
         dist_table = [math.hypot(nd.x - node_new.x, nd.y - node_new.y) for nd in self.vertex]
         dist_table_index = [ind for ind in range(len(dist_table)) if dist_table[ind] <= r and
@@ -177,9 +191,8 @@ def main():
     x_start = (2, 2)  # Starting node
     x_goal = (49, 24)  # Goal node
 
-    rrt_star = RrtStar(x_start, x_goal, 0.5, 0.10, 20, 100000)
-    rrt_star.planning()
-
-
+    rrt_star = RrtStar(x_start, x_goal, 0.5, 0.10, 20, 20000)
+    PATH = rrt_star.planning()
+    print(len(PATH))
 if __name__ == '__main__':
     main()
