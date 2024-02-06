@@ -1,6 +1,7 @@
 """
 Batch Informed Trees (BIT*)
 @author: huiming zhou
+@edited : Seung Ryu
 """
 
 import os
@@ -15,8 +16,9 @@ from scipy.spatial.transform import Rotation as Rot
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../Sampling_based_Planning/")
 
-from Sampling_based_Planning.rrt_2D import env, plotting, utils
-
+#from Sampling_based_Planning.rrt_2D import env, plotting, utils
+import env,plotting,utils
+# Static method : class를 딱히 안 부르면, class method와 비슷하게 바로 사용가능
 
 class Node:
     def __init__(self, x, y):
@@ -33,9 +35,10 @@ class Tree:
         self.r = 4.0
         self.V = set()
         self.E = set()
+        # So far now, I don't know exactly what these are.
         self.QE = set()
         self.QV = set()
-
+        # Parent nodes.
         self.V_old = set()
 
 
@@ -51,17 +54,18 @@ class BITStar:
         self.utils = utils.Utils()
 
         self.fig, self.ax = plt.subplots()
-
+        # delta : the size of a single gap between nodes. <- Resolution of the solution.
         self.delta = self.utils.delta
         self.x_range = self.env.x_range
         self.y_range = self.env.y_range
-
+        # Obstacles'shapes are defined. 
         self.obs_circle = self.env.obs_circle
         self.obs_rectangle = self.env.obs_rectangle
         self.obs_boundary = self.env.obs_boundary
-
+        # Assign the end points of the trees.
         self.Tree = Tree(self.x_start, self.x_goal)
         self.X_sample = set()
+        # What is g_T : cost
         self.g_T = dict()
 
     def init(self):
@@ -70,9 +74,10 @@ class BITStar:
 
         self.g_T[self.x_start] = 0.0
         self.g_T[self.x_goal] = np.inf
-
+        # At first glance, the batch size is just the distance between start point and the goal point. 
         cMin, theta = self.calc_dist_and_angle(self.x_start, self.x_goal)
         C = self.RotationToWorldFrame(self.x_start, self.x_goal, cMin)
+        # Rotation matrix C.
         xCenter = np.array([[(self.x_start.x + self.x_goal.x) / 2.0],
                             [(self.x_start.y + self.x_goal.y) / 2.0], [0.0]])
 
@@ -87,7 +92,7 @@ class BITStar:
                     m = 350
                 else:
                     m = 200
-
+                # Not reach goal points.
                 if self.x_goal.parent is not None:
                     path_x, path_y = self.ExtractPath()
                     plt.plot(path_x, path_y, linewidth=2, color='r')
@@ -139,7 +144,7 @@ class BITStar:
                 self.Tree.QV = set()
 
             if k % 5 == 0:
-                self.animation(xCenter, self.g_T[self.x_goal], cMin, theta)
+                self.animation(xCenter, self.g_T[self.x_goal], self.cMin, self.theta)
 
         path_x, path_y = self.ExtractPath()
         plt.plot(path_x, path_y, linewidth=2, color='r')
@@ -297,10 +302,13 @@ class BITStar:
         a1 = np.array([[(x_goal.x - x_start.x) / L],
                        [(x_goal.y - x_start.y) / L], [0.0]])
         e1 = np.array([[1.0], [0.0], [0.0]])
+        # @ : matrix multiplication using the "@" operator in Numpy.
         M = a1 @ e1.T
+        # Eigen value, Eigen vector, 
+        # To find the optimal rotation between two 3D vectors.
         U, _, V_T = np.linalg.svd(M, True, True)
-        C = U @ np.diag([1.0, 1.0, np.linalg.det(U) * np.linalg.det(V_T.T)]) @ V_T
-
+        #C = U @ np.diag([1.0, 1.0, np.linalg.det(U) * np.linalg.det(V_T.T)]) @ V_T
+        C = V_T @ U.T
         return C
 
     @staticmethod
@@ -394,7 +402,7 @@ def main():
     iter_max = 200
     print("start!!!")
     bit = BITStar(x_start, x_goal, eta, iter_max)
-    # bit.animation("Batch Informed Trees (BIT*)")
+    #bit.animation("Batch Informed Trees (BIT*)")
     bit.planning()
 
 
