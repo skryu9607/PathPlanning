@@ -87,31 +87,36 @@ class BITStar:
         theta, cMin, xCenter, C = self.init()
         #if self.Tree.QV is None:
             #print()
-        for k in range(500):
+        for k in range(2500):
+            
             # Batch Creation
             if not self.Tree.QE and not self.Tree.QV:
                 if k == 0:
-                    m = 350
+                    m = 350 * 5
                 else:
-                    m = 200
+                    m = 200 * 1
                 # Reach goal points
                 if self.x_goal.parent is not None:
                     path_x, path_y = self.ExtractPath()
                     plt.plot(path_x, path_y, linewidth=2, color='r')
-                    plt.pause(0.5)
+                    plt.pause(0.01)
                 # g_T :  Current Tree 구조상에서의 cost-to
                 # self.Prune(기준 cost.), 목적지까지 가는 cost-to-come보다 작은 vertices들은
                #은 삭제된다. 
                 self.Prune(self.g_T[self.x_goal])
                # update : inserting. 
                # sample할 때의 sample ellipsoid의 크기가 달라진다. 
+                print(m)
+                print(cMin)
                 self.X_sample.update(self.Sample(m, self.g_T[self.x_goal], cMin, xCenter, C))
                 self.Tree.V_old = {v for v in self.Tree.V} 
                 print(len(self.Tree.V))
                 self.Tree.QV = {v for v in self.Tree.V}
                 print(len(self.Tree.QV))
-                
-                self.Tree.r = self.radius(len(self.Tree.V) + len(self.X_sample))
+                if k == 0: 
+                    self.Tree.r = 1.5
+                else:
+                    self.Tree.r = self.radius(len(self.Tree.V) + len(self.X_sample))
                 # Printing cBest <- Infinity
                 print("Expansion")
             # 확장이 benefit할 때까지.
@@ -162,8 +167,8 @@ class BITStar:
             else:
                 self.Tree.QE = set()
                 self.Tree.QV = set()
-
-            if k % 5 == 0:
+            #print("k is", k)
+            if k % 20 == 0:
                 self.animation(xCenter, self.g_T[self.x_goal], cMin, theta)
 
         path_x, path_y = self.ExtractPath()
@@ -257,34 +262,33 @@ class BITStar:
         lambda_X = len([1 for v in self.Tree.V if self.f_estimated(v) <= cBest])
         #radius = 
         radius = 2 * self.eta * (1.5 * lambda_X / math.pi * math.log(q) / q) ** 0.5
-
+        print("radius is ",radius)
         return radius
 
     def ExpandVertex(self, v):
-       # if v in self.Tree.QV:
-            self.Tree.QV.remove(v)
-        # X_near은 Sample들 중에서 radius r 안에 들어오는 모든 X_samples. 
-            print("X_sample's length",len(self.X_sample))
-            X_near = {x for x in self.X_sample if self.calc_dist(x, v) <= self.Tree.r}
-            print("X_near's length",len(X_near))
-            if X_near is not None:
-                for x in X_near:
-                    # estimated 는 어떻게 얻는걸까?
-                    # self.start로부터의 직선거리. <- g // self.goal까지의 거리 : h_estimated . 
-                    if self.g_estimated(v) + self.calc_dist(v, x) + self.h_estimated(x) < self.g_T[self.x_goal]:
-                        self.g_T[x] = np.inf
-                        self.Tree.QE.add((v, x))
+    # if v in self.Tree.QV:
+        self.Tree.QV.remove(v)
+    # X_near은 Sample들 중에서 radius r 안에 들어오는 모든 X_samples. 
+        print("X_sample's length",len(self.X_sample))
+        X_near = {x for x in self.X_sample if self.calc_dist(x, v) <= self.Tree.r}
+        print("X_near's length",len(X_near))
+        for x in X_near:
+            # estimated 는 어떻게 얻는걸까?
+            # self.start로부터의 직선거리. <- g // self.goal까지의 거리 : h_estimated . 
+            if self.g_estimated(v) + self.calc_dist(v, x) + self.h_estimated(x) < self.g_T[self.x_goal]:
+                self.g_T[x] = np.inf
+                self.Tree.QE.add((v, x))
 
-            if v not in self.Tree.V_old:
-                V_near = {w for w in self.Tree.V if self.calc_dist(w, v) <= self.Tree.r}
+        if v not in self.Tree.V_old:
+            V_near = {w for w in self.Tree.V if self.calc_dist(w, v) <= self.Tree.r}
 
-                for w in V_near:
-                    if (v, w) not in self.Tree.E and \
-                            self.g_estimated(v) + self.calc_dist(v, w) + self.h_estimated(w) < self.g_T[self.x_goal] and \
-                            self.g_T[v] + self.calc_dist(v, w) < self.g_T[w]:
-                        self.Tree.QE.add((v, w))
-                        if w not in self.g_T:
-                            self.g_T[w] = np.inf
+            for w in V_near:
+                if (v, w) not in self.Tree.E and \
+                        self.g_estimated(v) + self.calc_dist(v, w) + self.h_estimated(w) < self.g_T[self.x_goal] and \
+                        self.g_T[v] + self.calc_dist(v, w) < self.g_T[w]:
+                    self.Tree.QE.add((v, w))
+                    if w not in self.g_T:
+                        self.g_T[w] = np.inf
 
     def BestVertexQueueValue(self):
         if not self.Tree.QV:
@@ -415,7 +419,7 @@ class BITStar:
         t = np.arange(0, 2 * math.pi + 0.1, 0.2)
         x = [a * math.cos(it) for it in t]
         y = [b * math.sin(it) for it in t]
-        rot = Rot.from_euler('z', -angle).as_dcm()[0:2, 0:2]
+        rot = Rot.from_euler('z', -angle).as_matrix()[0:2, 0:2]
         fx = rot @ np.array([x, y])
         px = np.array(fx[0, :] + cx).flatten()
         py = np.array(fx[1, :] + cy).flatten()
@@ -426,7 +430,7 @@ class BITStar:
 def main():
     x_start = (18, 8)  # Starting node
     x_goal = (37, 18)  # Goal node
-    eta = 2
+    eta = 2 * 1
     iter_max = 200
     print("start!!!")
     bit = BITStar(x_start, x_goal, eta, iter_max)
