@@ -85,31 +85,51 @@ class BITStar:
 
     def planning(self):
         theta, cMin, xCenter, C = self.init()
-
+        #if self.Tree.QV is None:
+            #print()
         for k in range(500):
+            # Batch Creation
             if not self.Tree.QE and not self.Tree.QV:
                 if k == 0:
                     m = 350
                 else:
                     m = 200
-                # Not reach goal points.
+                # Reach goal points
                 if self.x_goal.parent is not None:
                     path_x, path_y = self.ExtractPath()
                     plt.plot(path_x, path_y, linewidth=2, color='r')
                     plt.pause(0.5)
-
+                # g_T :  Current Tree 구조상에서의 cost-to
+                # self.Prune(기준 cost.), 목적지까지 가는 cost-to-come보다 작은 vertices들은
+               #은 삭제된다. 
                 self.Prune(self.g_T[self.x_goal])
+               # update : inserting. 
+               # sample할 때의 sample ellipsoid의 크기가 달라진다. 
                 self.X_sample.update(self.Sample(m, self.g_T[self.x_goal], cMin, xCenter, C))
-                self.Tree.V_old = {v for v in self.Tree.V}
+                self.Tree.V_old = {v for v in self.Tree.V} 
+                print(len(self.Tree.V))
                 self.Tree.QV = {v for v in self.Tree.V}
-                # self.Tree.r = self.radius(len(self.Tree.V) + len(self.X_sample))
-
+                print(len(self.Tree.QV))
+                
+                self.Tree.r = self.radius(len(self.Tree.V) + len(self.X_sample))
+                # Printing cBest <- Infinity
+                print("Expansion")
+            # 확장이 benefit할 때까지.
+            i = 0
             while self.BestVertexQueueValue() <= self.BestEdgeQueueValue():
+                i = i + 1
+                print(i)
+                print("The Length of QV ",len(self.Tree.QV))
+                print("The Length of QE ",len(self.Tree.QE))
                 self.ExpandVertex(self.BestInVertexQueue())
-
+   
+            # Best means "minimum". min(distance).
             vm, xm = self.BestInEdgeQueue()
+            # BestInEdgeQueue : graph상에서의 진짜 g와 v,x사이의 직선거리, 
+            # 그리고 h_estimated으로 목적지까지의 거리.
             self.Tree.QE.remove((vm, xm))
-
+            # Loop Control
+            
             if self.g_T[vm] + self.calc_dist(vm, xm) + self.h_estimated(xm) < self.g_T[self.x_goal]:
                 actual_cost = self.cost(vm, xm)
                 if self.g_estimated(vm) + actual_cost + self.h_estimated(xm) < self.g_T[self.x_goal]:
@@ -144,7 +164,7 @@ class BITStar:
                 self.Tree.QV = set()
 
             if k % 5 == 0:
-                self.animation(xCenter, self.g_T[self.x_goal], self.cMin, self.theta)
+                self.animation(xCenter, self.g_T[self.x_goal], cMin, theta)
 
         path_x, path_y = self.ExtractPath()
         plt.plot(path_x, path_y, linewidth=2, color='r')
@@ -175,7 +195,7 @@ class BITStar:
             return np.inf
 
         return self.calc_dist(start, end)
-
+    # estimation part should be changed. Not only distance but also energy cost.
     def f_estimated(self, node):
         return self.g_estimated(node) + self.h_estimated(node)
 
@@ -233,30 +253,38 @@ class BITStar:
 
     def radius(self, q):
         cBest = self.g_T[self.x_goal]
+        print(cBest)
         lambda_X = len([1 for v in self.Tree.V if self.f_estimated(v) <= cBest])
+        #radius = 
         radius = 2 * self.eta * (1.5 * lambda_X / math.pi * math.log(q) / q) ** 0.5
 
         return radius
 
     def ExpandVertex(self, v):
-        self.Tree.QV.remove(v)
-        X_near = {x for x in self.X_sample if self.calc_dist(x, v) <= self.Tree.r}
+       # if v in self.Tree.QV:
+            self.Tree.QV.remove(v)
+        # X_near은 Sample들 중에서 radius r 안에 들어오는 모든 X_samples. 
+            print("X_sample's length",len(self.X_sample))
+            X_near = {x for x in self.X_sample if self.calc_dist(x, v) <= self.Tree.r}
+            print("X_near's length",len(X_near))
+            if X_near is not None:
+                for x in X_near:
+                    # estimated 는 어떻게 얻는걸까?
+                    # self.start로부터의 직선거리. <- g // self.goal까지의 거리 : h_estimated . 
+                    if self.g_estimated(v) + self.calc_dist(v, x) + self.h_estimated(x) < self.g_T[self.x_goal]:
+                        self.g_T[x] = np.inf
+                        self.Tree.QE.add((v, x))
 
-        for x in X_near:
-            if self.g_estimated(v) + self.calc_dist(v, x) + self.h_estimated(x) < self.g_T[self.x_goal]:
-                self.g_T[x] = np.inf
-                self.Tree.QE.add((v, x))
+            if v not in self.Tree.V_old:
+                V_near = {w for w in self.Tree.V if self.calc_dist(w, v) <= self.Tree.r}
 
-        if v not in self.Tree.V_old:
-            V_near = {w for w in self.Tree.V if self.calc_dist(w, v) <= self.Tree.r}
-
-            for w in V_near:
-                if (v, w) not in self.Tree.E and \
-                        self.g_estimated(v) + self.calc_dist(v, w) + self.h_estimated(w) < self.g_T[self.x_goal] and \
-                        self.g_T[v] + self.calc_dist(v, w) < self.g_T[w]:
-                    self.Tree.QE.add((v, w))
-                    if w not in self.g_T:
-                        self.g_T[w] = np.inf
+                for w in V_near:
+                    if (v, w) not in self.Tree.E and \
+                            self.g_estimated(v) + self.calc_dist(v, w) + self.h_estimated(w) < self.g_T[self.x_goal] and \
+                            self.g_T[v] + self.calc_dist(v, w) < self.g_T[w]:
+                        self.Tree.QE.add((v, w))
+                        if w not in self.g_T:
+                            self.g_T[w] = np.inf
 
     def BestVertexQueueValue(self):
         if not self.Tree.QV:
@@ -275,7 +303,7 @@ class BITStar:
         if not self.Tree.QV:
             print("QV is Empty!")
             return None
-
+        # {key : value}
         v_value = {v: self.g_T[v] + self.h_estimated(v) for v in self.Tree.QV}
 
         return min(v_value, key=v_value.get)
